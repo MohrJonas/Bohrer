@@ -1,0 +1,32 @@
+{
+  "name": "bohrer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "node .\\dist\\index.js -i .\\pexels-dmytro-kormylets-14656105.jpg -c .\\config.toml"
+  },
+  "author": "MohrJonas",
+  "license": "AGPL-3.0",
+  "devDependencies": {
+    "@types/chroma-js": "^2.4.0",
+    "@types/lodash": "^4.14.192",
+    "@types/tinycolor": "^1.1.27",
+    "@typescript-eslint/eslint-plugin": "^5.57.0",
+    "@typescript-eslint/parser": "^5.57.0",
+    "esbuild": "^0.17.15",
+    "eslint": "^8.37.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.3"
+  },
+  "dependencies": {
+    "chroma-js": "^2.4.2",
+    "commander": "^10.0.0",
+    "jimp": "^0.22.7",
+    "lodash": "^4.17.21",
+    "makerjs": "^0.17.6",
+    "ora": "^6.3.0",
+    "tinycolor": "^0.0.1",
+    "toml": "^3.0.0"
+  }
+}

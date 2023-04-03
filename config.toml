@@ -1,0 +1,16 @@
+[color]
+format = "rgb" # can be either "rgb" or "hex"
+colors = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [0, 0, 0]] # if format = "rgb" -> [r, g, b]; else #xxxxxx
+
+[drilling]
+minHoleSize = 0.5 # minimum hole diameter in mm
+
+[image]
+grayscale = false # if image should be grayscale
+size = [100, 100] # resize image to size, in pixel 
+
+[workpiece]
+dimensions = [100, 100] # workpiece dimensions in mm, image will be stretched over the size
+
+[output]
+format = "svg" # output format, can be "dxf" or "svg"
