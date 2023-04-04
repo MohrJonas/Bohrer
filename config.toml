@@ -1,16 +1,23 @@
 [color]
-format = "rgb" # can be either "rgb" or "hex"
-colors = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [0, 0, 0]] # if format = "rgb" -> [r, g, b]; else #xxxxxx
+primaryColors = [
+    "#7FB5CD"    
+] # primary colors hex codes
+maxDiff = 5 # max deviation a color may have for it to be accepted
 
 [drilling]
-minHoleSize = 0.5 # minimum hole diameter in mm
+minHoleSize = 0.5 # minimum hole diameter in mm,
+holeMargin = 0.5
+strategy = "stacked" # or grouped
 
 [image]
-grayscale = false # if image should be grayscale
-size = [100, 100] # resize image to size, in pixel 
+grayscale = false  # if image should be grayscale
+size = [5, 5] # resize image to size, in pixel 
 
 [workpiece]
-dimensions = [100, 100] # workpiece dimensions in mm, image will be stretched over the size
+dimensions = [
+    250,
+    250,
+] # workpiece dimensions in mm, image will be stretched over the size
 
 [output]
 format = "svg" # output format, can be "dxf" or "svg"

@@ -1,11 +1,12 @@
-import Layer from "./layer"
-
 export type ParsedConfig = {
     color: {
-        colors: Array<string> | undefined
+        primaryColors: Array<string> | undefined,
+        maxDiff: number | undefined
     } | undefined,
     drilling: {
-        minHoleSize: number | undefined
+        minHoleSize: number | undefined,
+        holeMargin: number | undefined,
+        strategy: "stacked" | "grouped" | undefined
     } | undefined,
     image: {
         grayscale: boolean | undefined,
@@ -21,10 +22,13 @@ export type ParsedConfig = {
 
 export type Config = {
     color: {
-        colors: Array<string>
+        primaryColors: Array<string>,
+        holeMargin: number,
+        maxDiff: number
     },
     drilling: {
-        minHoleSize: number
+        minHoleSize: number,
+        strategy: "stacked" | "grouped"
     },
     image: {
         grayscale: boolean,
@@ -38,12 +42,15 @@ export type Config = {
     }
 }
 
-export type ExtendedConfig = {
+export type RuntimeConfig = {
     color: {
-        colors: Array<string>
+        primaryColors: Array<string>,
+        maxDiff: number,
     },
     drilling: {
-        minHoleSize: number
+        minHoleSize: number,
+        holeMargin: number
+        strategy: "stacked" | "grouped"
     },
     image: {
         grayscale: boolean,
@@ -56,25 +63,27 @@ export type ExtendedConfig = {
         format: "svg" | "dxf"
     },
     mmPerPixelX: number,
-    mmPerPixelY: number,
-    layerTable: Record<number, Layer>
+    mmPerPixelY: number
 }
 
 export const DefaultConfig: Config = {
-	color: {
-		colors: ["#00ffff", "#ff00ff", "#ffff00", "#000000"]
-	},
-	drilling: {
-		minHoleSize: 1
-	},
-	image: {
-		grayscale: false,
-		size: [100, 100]
-	},
-	workpiece: {
-		dimensions: [100, 100]
-	},
-	output: {
-		format: "dxf"
-	}
+    color: {
+        primaryColors: [],
+        "maxDiff": 25,
+        "holeMargin": 2
+    },
+    drilling: {
+        minHoleSize: 1,
+        strategy: "grouped"
+    },
+    image: {
+        grayscale: false,
+        size: [100, 100]
+    },
+    workpiece: {
+        dimensions: [100, 100]
+    },
+    output: {
+        format: "dxf"
+    }
 };

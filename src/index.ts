@@ -1,71 +1,72 @@
 import { program } from "commander";
 import Jimp from "jimp";
-import { Config, DefaultConfig, ExtendedConfig, ParsedConfig } from "./config";
+import { Config, DefaultConfig, RuntimeConfig, ParsedConfig } from "./config";
 import * as toml from "toml";
 import { readFileSync, writeFileSync } from "fs";
 import ora from "ora";
 import chroma from "chroma-js";
 import { flatMap, sortBy } from "lodash";
 import tinycolor = require("tinycolor2");
-import Layer from "./layer";
-import { exporter } from "makerjs";
+import { environment as env } from "./environment";
+import ColorGrid from "./colorgrid";
+import PrimaryColor from "./primarycolor";
+import MixedColor from "./mixedcolor";
+import { exporter, unitType } from "makerjs";
 
 async function run() {
-	program
-		.requiredOption("-i <imagepath>")
-		.requiredOption("-c <configpath>")
-		.parse();
-	const spinner = ora("⛏️Crunching numbers⛏️");
-	spinner.start();
-	const options = program.opts();
-	const config = createConfig(options["c"]);
-	let image = (await Jimp.read(options["i"]))
-		.resize(config.image.size[0], config.image.size[1]);
-	if (config.image.grayscale) {
-		image = image.grayscale();
-	}
-	image.scan(0, 0, image.bitmap.width, image.bitmap.height, (x, y) => {
-		const layer = getClosestColor(config, image.getPixelColor(x, y));
-		const layerColor = Jimp.rgbaToInt(parseInt(layer.color[0]), parseInt(layer.color[1]), parseInt(layer.color[2]), 255);
-		image.setPixelColor(layerColor, x, y);
-		config.layerTable[layer.index].paths.push({
-			type: "circle",
-			origin: [x * config.mmPerPixelX + config.mmPerPixelX / 2, config.workpiece.dimensions[1] - y * config.mmPerPixelY + config.mmPerPixelY / 2],
-			radius: config.drilling.minHoleSize,
-			layer: layer.color
-		});
-	});
-	const paths = flatMap(config.layerTable, (layer) => { return layer.paths; });
-	const outCOntent = config.output.format === "svg" ? exporter.toSVG(paths, {
-		units: "Millimeter"
-	}) : exporter.toDXF(paths, {
-		units: "Millimeter"
-	});
-	writeFileSync(`Drillfile.${config.output.format}`, outCOntent);
-	image.write("out.png");
-	spinner.stop();
+    program
+        .requiredOption("-i <imagepath>")
+        .requiredOption("-c <configpath>")
+        .parse();
+    const spinner = ora("⛏️Crunching numbers⛏️");
+    env.opts = program.opts();
+    env.config = createConfig(env.opts["c"]);
+    env.colorGrid = new ColorGrid(env.config.image.size[0], env.config.image.size[1]);
+    env.image = await Jimp.read(env.opts["i"]);
+    env.image.resize(env.config.image.size[0], env.config.image.size[1]);
+    if (env.config.image.grayscale) env.image.grayscale();
+    env.image.scan(0, 0, env.image.bitmap.width, env.image.bitmap.height, (x, y) => {
+        const rgbColor = Jimp.intToRGBA(env.image.getPixelColor(x, y));
+        const pixelColor = tinycolor({ r: rgbColor.r, g: rgbColor.g, b: rgbColor.b, a: 255 });
+        const closestPrimaryColor = getClosestColor(pixelColor);
+        if (closestPrimaryColor && closestPrimaryColor.distance <= env.config.color.maxDiff) {
+            env.colorGrid.setColor(y, x, new PrimaryColor(closestPrimaryColor.color));
+        } else {
+            env.colorGrid.setColor(y, x, new MixedColor({
+                r: { color: tinycolor("red"), ratio: pixelColor.toRgb().r / 255 },
+                g: { color: tinycolor("green"), ratio: pixelColor.toRgb().g / 255 },
+                b: { color: tinycolor("blue"), ratio: pixelColor.toRgb().b / 255 }
+            }));
+        }
+    });
+    const layers = env.colorGrid.build();
+    const paths = flatMap(layers, (layer) => { return layer.paths; });
+    const outCOntent = env.config.output.format === "svg" ? exporter.toSVG(paths, {
+        units: unitType.Millimeter
+    }) : exporter.toDXF(paths, {
+        units: unitType.Millimeter
+    });
+    writeFileSync(`Drillfile.${env.config.output.format}`, outCOntent);
+    env.image.write("out.png");
+    spinner.stop();
 }
 
-function createConfig(filePath: string): ExtendedConfig {
-	const config: Config = Object.assign({}, DefaultConfig, toml.parse(readFileSync(filePath, "utf-8")) as ParsedConfig);
-	const map: Record<number, Layer> = {};
-	config.color.colors.forEach((color, index) => { map[index] = new Layer(index, color); });
-	return Object.assign(config, {
-		mmPerPixelX: config.workpiece.dimensions[0] / config.image.size[0],
-		mmPerPixelY: config.workpiece.dimensions[1] / config.image.size[1],
-		layerTable: map
-	} as ExtendedConfig
-	);
+function createConfig(filePath: string): RuntimeConfig {
+    const config: Config = Object.assign({}, DefaultConfig, toml.parse(readFileSync(filePath, "utf-8")) as ParsedConfig);
+    return Object.assign(config, {
+        mmPerPixelX: config.workpiece.dimensions[0] / config.image.size[0],
+        mmPerPixelY: config.workpiece.dimensions[1] / config.image.size[1]
+    } as RuntimeConfig);
 }
 
-function getClosestColor(config: ExtendedConfig, color: number): Layer {
-	const colorRGB = Jimp.intToRGBA(color);
-	const colorHexString = tinycolor({ r: colorRGB.r, g: colorRGB.g, b: colorRGB.b }).toHexString();
-	return sortBy(config.layerTable, (tableEntry) => {
-		return chroma.deltaE(tableEntry.color, colorHexString);
-	})[0];
+function getClosestColor(color: tinycolorInstance): { color: tinycolorInstance, distance: number } {
+    const mappedColors = env.config.color.primaryColors.map((primaryColorHexString) => {
+        const primaryColor = tinycolor(primaryColorHexString);
+        return { color: primaryColor, distance: chroma.deltaE(primaryColor.toHexString(), color.toHexString()) };
+    });
+    return sortBy(mappedColors, (entry) => { return entry.distance; })[0];
 }
 
 (async () => {
-	await run();
+    await run();
 })();
